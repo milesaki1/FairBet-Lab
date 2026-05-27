@@ -20,3 +20,15 @@ class TipoLimite(models.TextChoices):
     DIARIO = "diario", "Diario"
     SEMANAL = "semanal", "Semanal"
     MENSUAL = "mensual", "Mensual"
+
+
+class TipoCuenta(models.TextChoices):
+    WALLET_USUARIO = "wallet_usuario", "Billetera del Usuario"
+    CASA = "casa", "Casa de Apuestas"
+    APUESTAS_PENDIENTES = "apuestas_pendientes", "Apuestas Pendientes"
+    BONOS = "bonos", "Bonos"
+
+
+class Direccion(models.TextChoices):
+    DEBIT = "DEBIT", "Débito"
+    CREDIT = "CREDIT", "Crédito"

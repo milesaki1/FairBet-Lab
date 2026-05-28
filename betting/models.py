@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
 
-from config.choices import EstadoEvento, EstadoApuesta
+from config.choices import EstadoEvento, EstadoApuesta, TipoApuesta
 
 
 class Evento(models.Model):
@@ -63,11 +63,6 @@ class Seleccion(models.Model):
 
 
 class Apuesta(models.Model):
-    TIPO_CHOICES = [
-        ("SIMPLE", "Simple"),
-        ("COMBINADA", "Combinada"),
-    ]
-
     usuario = models.ForeignKey(User, on_delete=models.PROTECT, related_name="apuestas")
     seleccion = models.ForeignKey(
         Seleccion,
@@ -94,8 +89,8 @@ class Apuesta(models.Model):
     )
     tipo = models.CharField(
         max_length=15,
-        choices=TIPO_CHOICES,
-        default="SIMPLE",
+        choices=TipoApuesta.choices,
+        default=TipoApuesta.SIMPLE,
     )
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)

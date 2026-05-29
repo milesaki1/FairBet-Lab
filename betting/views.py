@@ -35,8 +35,12 @@ def catalogo_html(request):
 
     apuestas_resueltas = Apuesta.objects.filter(
         usuario=request.user, 
-        estado__in=[EstadoApuesta.WON, EstadoApuesta.LOST, EstadoApuesta.CANCELLED]
+        estado__in=[EstadoApuesta.WON, EstadoApuesta.LOST, EstadoApuesta.CANCELLED, EstadoApuesta.CASHED_OUT]
     ).select_related("seleccion__mercado__evento").prefetch_related("detalles__seleccion__mercado__evento").order_by('-creado')
+
+    from betting.services import calcular_cashout
+    for ap in apuestas_abiertas:
+        ap.cashout_val = calcular_cashout(ap)
 
     context = {
         "saldo": saldo,
@@ -81,6 +85,38 @@ def apostar_html(request):
                 messages.error(request, detail)
             except Exception:
                 messages.error(request, "Ocurrió un error inesperado al procesar la apuesta.")
+
+    return redirect("catalogo_html")
+
+
+@login_required(login_url="login_html")
+def cashout_html(request):
+    if request.method == "POST":
+        apuesta_id = request.POST.get("apuesta_id")
+        if not apuesta_id:
+            messages.error(request, "Falta el identificador de la apuesta.")
+            return redirect("catalogo_html")
+
+        from betting.services import procesar_cashout, calcular_cashout
+        from betting.models import Apuesta
+        from config.choices import EstadoApuesta
+
+        try:
+            apuesta = Apuesta.objects.select_related("seleccion__mercado__evento").prefetch_related(
+                "detalles__seleccion__mercado__evento"
+            ).get(pk=apuesta_id, usuario=request.user, estado=EstadoApuesta.ACCEPTED)
+        except Apuesta.DoesNotExist:
+            messages.error(request, "Apuesta no encontrada o ya no está activa.")
+            return redirect("catalogo_html")
+
+        try:
+            apuesta, cashout = procesar_cashout(apuesta, request.user)
+            messages.success(
+                request,
+                f"¡Cashout exitoso! Recibiste f. {cashout} por tu apuesta #{apuesta.id}."
+            )
+        except ValidationError as e:
+            messages.error(request, str(e))
 
     return redirect("catalogo_html")
 

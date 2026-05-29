@@ -603,7 +603,16 @@
                 <span class="text-slate-500">Inversión: f. {{ apuesta.monto|stringformat:".2f" }}</span>
                 <span class="text-indigo-600">Gana: f. {{ apuesta.payout|stringformat:".2f" }}</span>
               </div>
-
+              {% if apuesta.cashout_val and apuesta.cashout_val > 0 %}
+                <form action="{% url 'cashout_html' %}" method="POST" onsubmit="return confirm('¿Retirar tu apuesta por f. {{ apuesta.cashout_val|stringformat:".2f" }}? Se descontará un 5% de comisión.')">
+                  {% csrf_token %}
+                  <input type="hidden" name="apuesta_id" value="{{ apuesta.id }}">
+                  <button type="submit" class="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-black py-2.5 rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-2 shadow-sm">
+                    <i data-lucide="wallet" class="w-4 h-4"></i>
+                    <span>Cashout f. {{ apuesta.cashout_val|stringformat:".2f" }}</span>
+                  </button>
+                </form>
+              {% endif %}
             </div>
           {% endfor %}
         {% else %}
@@ -623,11 +632,13 @@
                 bg-emerald-50/30 border-emerald-100 hover:border-emerald-300
               {% elif apuesta.estado == 'lost' %}
                 bg-rose-50/20 border-rose-100 hover:border-rose-200
+              {% elif apuesta.estado == 'cashed_out' %}
+                bg-blue-50/30 border-blue-100 hover:border-blue-200
               {% else %}
                 bg-slate-50 border-slate-200
               {% endif %}">
               <div class="flex justify-between items-center pb-2 border-b 
-                {% if apuesta.estado == 'won' %}border-emerald-100/50{% elif apuesta.estado == 'lost' %}border-rose-100/50{% else %}border-slate-200/50{% endif %}">
+                {% if apuesta.estado == 'won' %}border-emerald-100/50{% elif apuesta.estado == 'lost' %}border-rose-100/50{% elif apuesta.estado == 'cashed_out' %}border-blue-100/50{% else %}border-slate-200/50{% endif %}">
                 <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[70%]">
                   {% if apuesta.tipo == 'COMBINADA' %}
                     Combinada ({{ apuesta.detalles.count }} selecciones)
@@ -643,12 +654,14 @@
                       bg-emerald-500 text-white
                     {% elif apuesta.estado == 'lost' %}
                       bg-rose-500 text-white
+                    {% elif apuesta.estado == 'cashed_out' %}
+                      bg-blue-500 text-white
                     {% else %}
                       bg-slate-500 text-white
                     {% endif %}">
                     {% if apuesta.tipo == 'COMBINADA' %}
                       COMBINADA
-                    {% elif apuesta.estado == 'won' %}GANADA{% elif apuesta.estado == 'lost' %}PERDIDA{% else %}ANULADA{% endif %}
+                    {% elif apuesta.estado == 'won' %}GANADA{% elif apuesta.estado == 'lost' %}PERDIDA{% elif apuesta.estado == 'cashed_out' %}RETIRADA{% else %}ANULADA{% endif %}
                   </span>
                   {% if apuesta.tipo == 'COMBINADA' %}
                     <button type="button" onclick="toggleDetallesApuesta(this)" class="p-1 text-slate-400 hover:text-indigo-600 transition-colors">
@@ -689,6 +702,8 @@
                   bg-emerald-100/50 text-emerald-800
                 {% elif apuesta.estado == 'lost' %}
                   bg-rose-100/50 text-rose-800
+                {% elif apuesta.estado == 'cashed_out' %}
+                  bg-blue-100/50 text-blue-800
                 {% else %}
                   bg-slate-200/50 text-slate-700
                 {% endif %}">
@@ -698,6 +713,8 @@
                     + f. {{ apuesta.payout|stringformat:".2f" }}
                   {% elif apuesta.estado == 'lost' %}
                     - f. {{ apuesta.monto|stringformat:".2f" }}
+                  {% elif apuesta.estado == 'cashed_out' %}
+                    Retirada
                   {% else %}
                     Reembolso
                   {% endif %}

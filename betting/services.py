@@ -209,6 +209,84 @@ def crear_apuesta_combinada(user, seleccion_ids, monto, cuotas_esperadas=None):
     return apuesta
 
 
+FACTOR_CASA = Decimal("0.95")
+
+
+def calcular_cashout(apuesta):
+    if apuesta.estado != EstadoApuesta.ACCEPTED:
+        return Decimal("0.0000")
+
+    from decimal import Decimal
+
+    if apuesta.tipo == "SIMPLE" and apuesta.seleccion:
+        return _calcular_cashout_simple(apuesta)
+    elif apuesta.tipo == "COMBINADA":
+        return _calcular_cashout_combinada(apuesta)
+    return Decimal("0.0000")
+
+
+def _calcular_cashout_simple(apuesta):
+    sel = apuesta.seleccion
+    evento = sel.mercado.evento
+    if evento.estado in (EstadoEvento.FINALIZADO, EstadoEvento.ANULADO):
+        return Decimal("0.0000")
+
+    cuota_original = apuesta.cuota_fijada
+    cuota_actual = sel.cuota
+    stake = apuesta.monto
+
+    if cuota_original <= 0 or cuota_actual <= 0:
+        return Decimal("0.0000")
+
+    cashout = stake * cuota_original / cuota_actual * FACTOR_CASA
+    return max(cashout, Decimal("0.0000")).quantize(Decimal("0.01"))
+
+
+def _calcular_cashout_combinada(apuesta):
+    detalles = apuesta.detalles.select_related("seleccion__mercado__evento")
+    cuota_original_acum = apuesta.cuota_fijada
+    cuota_actual_acum = Decimal("1.0000")
+
+    for det in detalles:
+        ev = det.seleccion.mercado.evento
+        if ev.estado in (EstadoEvento.FINALIZADO, EstadoEvento.ANULADO):
+            cuota_actual_acum *= Decimal("1.0000")
+        else:
+            cuota_actual_acum *= det.seleccion.cuota
+
+    if cuota_original_acum <= 0 or cuota_actual_acum <= 0:
+        return Decimal("0.0000")
+
+    stake = apuesta.monto
+    cashout = stake * cuota_original_acum / cuota_actual_acum * FACTOR_CASA
+    return max(cashout, Decimal("0.0000")).quantize(Decimal("0.01"))
+
+
+@transaction.atomic
+def procesar_cashout(apuesta, user):
+    from wallet.services import registrar_movimiento
+    import uuid
+
+    if apuesta.usuario != user:
+        raise ValidationError("Esta apuesta no te pertenece.")
+    if apuesta.estado != EstadoApuesta.ACCEPTED:
+        raise ValidationError("Solo puedes retirar apuestas activas.")
+
+    cashout = calcular_cashout(apuesta)
+    if cashout <= 0:
+        raise ValidationError("El cashout no está disponible para esta apuesta en este momento.")
+
+    monto_original = apuesta.monto
+    tid = uuid.uuid4()
+    registrar_movimiento(tid, user, TipoCuenta.APUESTAS_PENDIENTES, None, TipoCuenta.CASA, monto_original)
+    registrar_movimiento(tid, None, TipoCuenta.CASA, user, TipoCuenta.WALLET_USUARIO, cashout)
+
+    apuesta.estado = EstadoApuesta.CASHED_OUT
+    apuesta.save()
+
+    return apuesta, cashout
+
+
 @transaction.atomic
 def crear_mercados_para_evento(evento):
     from decimal import Decimal

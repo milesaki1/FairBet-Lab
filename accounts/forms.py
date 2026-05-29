@@ -162,6 +162,19 @@ class RegistroForm(forms.Form):
             }
         ),
     )
+    digito_verificador = forms.CharField(
+        label="Dígito Verificador",
+        max_length=1,
+        min_length=1,
+        widget=forms.TextInput(
+            attrs={
+                "class": "w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 bg-white",
+                "placeholder": "0-9",
+                "id": "digito_verificador",
+                "maxlength": "1",
+            }
+        ),
+    )
 
     def clean_username(self):
         username = self.cleaned_data.get("username")
@@ -212,6 +225,13 @@ class RegistroForm(forms.Form):
                 raise forms.ValidationError(e.messages)
         return dni
 
+    def clean_digito_verificador(self):
+        dv = self.cleaned_data.get("digito_verificador")
+        if dv:
+            if not dv.isdigit() or len(dv) != 1:
+                raise forms.ValidationError("Debe ser un único dígito del 0 al 9.")
+        return dv
+
     def clean(self):
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
@@ -219,4 +239,15 @@ class RegistroForm(forms.Form):
 
         if password and password_confirm and password != password_confirm:
             self.add_error("password_confirm", "Las contraseñas no coinciden.")
+
+        # Validar DNI con digito verificador en conjunto
+        dni = cleaned_data.get("dni")
+        digito_verificador = cleaned_data.get("digito_verificador")
+        if dni and digito_verificador:
+            from django.core.exceptions import ValidationError as DjangoValidationError
+
+            try:
+                validar_dni(dni, digito_verificador)
+            except DjangoValidationError as e:
+                self.add_error("digito_verificador", e.messages)
         return cleaned_data

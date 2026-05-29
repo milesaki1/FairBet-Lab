@@ -178,21 +178,40 @@
         >KYC / DNI Peruano</span
       >
 
-      <div>
-        <label
-          for="{{ form.dni.id_for_label }}"
-          class="block text-xs text-slate-500 mb-1"
-          >{{ form.dni.label }}</label
-        >
-        {{ form.dni }}
-        <p
-          class="text-red-600 text-xs mt-1 {% if not form.dni.errors %}hidden{% endif %}"
-          id="error-dni"
-        >
-          {% if form.dni.errors %}
-            {{ form.dni.errors|join:", " }}
-          {% endif %}
-        </p>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="col-span-2">
+          <label
+            for="{{ form.dni.id_for_label }}"
+            class="block text-xs text-slate-500 mb-1"
+            >{{ form.dni.label }}</label
+          >
+          {{ form.dni }}
+          <p
+            class="text-red-600 text-xs mt-1 {% if not form.dni.errors %}hidden{% endif %}"
+            id="error-dni"
+          >
+            {% if form.dni.errors %}
+              {{ form.dni.errors|join:", " }}
+            {% endif %}
+          </p>
+        </div>
+
+        <div>
+          <label
+            for="{{ form.digito_verificador.id_for_label }}"
+            class="block text-xs text-slate-500 mb-1"
+            >{{ form.digito_verificador.label }}</label
+          >
+          {{ form.digito_verificador }}
+          <p
+            class="text-red-600 text-xs mt-1 {% if not form.digito_verificador.errors %}hidden{% endif %}"
+            id="error-digito_verificador"
+          >
+            {% if form.digito_verificador.errors %}
+              {{ form.digito_verificador.errors|join:", " }}
+            {% endif %}
+          </p>
+        </div>
       </div>
     </div>
 
